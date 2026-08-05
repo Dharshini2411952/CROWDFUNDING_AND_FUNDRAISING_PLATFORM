@@ -1,0 +1,38 @@
+Table users {
+  user_id int [pk, increment]
+  name varchar
+  email varchar [unique]
+  phone varchar
+  password varchar
+}
+
+Table campaigns {
+  campaign_id int [pk, increment]
+  user_id int [ref: > users.user_id]
+  title varchar
+  description text
+  category varchar
+  goal_amount decimal
+  raised_amount decimal
+  deadline date
+  image varchar
+  status varchar
+}
+
+Table donations {
+  donation_id int [pk, increment]
+  campaign_id int [ref: > campaigns.campaign_id]
+  donor_name varchar
+  donor_email varchar
+  amount decimal
+  message text
+  donation_date datetime
+}
+
+Table admin {
+  admin_id int [pk, increment]
+  username varchar [unique]
+  password varchar
+}
+
+Ref: "users"."name" ?<>? "users"."phone"
