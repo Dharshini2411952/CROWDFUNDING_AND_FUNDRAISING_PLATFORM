@@ -4,9 +4,11 @@ from datetime import datetime
 from decimal import Decimal
 
 
-# ---------------- USER ----------------
+# =========================
+# AUTH SCHEMAS
+# =========================
 
-class UserCreate(BaseModel):
+class UserSignup(BaseModel):
     name: str
     email: EmailStr
     password: str
@@ -31,7 +33,14 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# ---------------- CAMPAIGN ----------------
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+
+# =========================
+# CAMPAIGN SCHEMAS
+# =========================
 
 class CampaignCreate(BaseModel):
     creator_id: int
@@ -53,19 +62,13 @@ class CampaignResponse(BaseModel):
     end_date: Optional[datetime] = None
     status: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# ---------------- DONATION ----------------
-
 class DonationCreate(BaseModel):
     campaign_id: int
     donor_id: int
     amount: Decimal
     message: Optional[str] = None
     payment_method: Optional[str] = None
+    transaction_id: Optional[str] = None
 
 
 class DonationResponse(BaseModel):
@@ -79,17 +82,41 @@ class DonationResponse(BaseModel):
     transaction_id: Optional[str] = None
     status: str
 
-    class Config:
-        from_attributes = True
+class CommentCreate(BaseModel):
+    campaign_id: int
+    user_id: int
+    content: str
 
 
-# ---------------- PAYMENT ----------------
+class CommentResponse(BaseModel):
+    comment_id: int
+    campaign_id: int
+    user_id: int
+    content: str
+    commented_at: datetime
+class RewardCreate(BaseModel):
+    campaign_id: int
+    title: str
+    description: Optional[str] = None
+    min_amount: Decimal
+    quantity: int
+    available_quantity: int
+
+
+class RewardResponse(BaseModel):
+    reward_id: int
+    campaign_id: int
+    title: str
+    description: Optional[str] = None
+    min_amount: Decimal
+    quantity: int
+    available_quantity: int
 
 class PaymentCreate(BaseModel):
     donation_id: int
     amount: Decimal
     method: str
-    transaction_id: str
+    transaction_id: Optional[str] = None
 
 
 class PaymentResponse(BaseModel):
@@ -105,44 +132,4 @@ class PaymentResponse(BaseModel):
         from_attributes = True
 
 
-# ---------------- REWARD ----------------
 
-class RewardCreate(BaseModel):
-    campaign_id: int
-    title: str
-    description: Optional[str] = None
-    min_amount: Decimal
-    quantity: int
-    available_quantity: int
-
-
-class RewardResponse(BaseModel):
-    reward_id: int
-    campaign_id: int
-    title: Optional[str] = None
-    description: Optional[str] = None
-    min_amount: Optional[Decimal] = None
-    quantity: Optional[int] = None
-    available_quantity: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ---------------- COMMENT ----------------
-
-class CommentCreate(BaseModel):
-    campaign_id: int
-    user_id: int
-    content: str
-
-
-class CommentResponse(BaseModel):
-    comment_id: int
-    campaign_id: int
-    user_id: int
-    content: str
-    commented_at: datetime
-
-    class Config:
-        from_attributes = True
