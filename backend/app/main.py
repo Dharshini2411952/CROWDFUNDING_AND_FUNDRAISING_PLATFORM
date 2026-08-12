@@ -9,6 +9,10 @@ from app.routes.reward import router as reward_router
 from app.routes.payment import router as payment_router
 
 
+# =========================
+# FASTAPI APP
+# =========================
+
 app = FastAPI(
     title="Fund AI API",
     description="Crowdfunding and Fundraising Platform API",
@@ -22,10 +26,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+
+    # Allow localhost / 127.0.0.1 with any port
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

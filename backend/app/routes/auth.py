@@ -3,9 +3,17 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.model import User
-from app.schemas import UserSignup, UserLogin, UserResponse, TokenResponse
-from app.utils import hash_password, verify_password, create_access_token
-
+from app.schemas import (
+    UserSignup,
+    UserLogin,
+    UserResponse,
+    TokenResponse
+)
+from app.utils import (
+    hash_password,
+    verify_password,
+    create_access_token
+)
 
 router = APIRouter(
     prefix="/auth",
@@ -22,10 +30,11 @@ def signup(
     user_data: UserSignup,
     db: Session = Depends(get_db)
 ):
-
-    existing_user = db.query(User).filter(
-        User.email == user_data.email
-    ).first()
+    existing_user = (
+        db.query(User)
+        .filter(User.email == user_data.email)
+        .first()
+    )
 
     if existing_user:
         raise HTTPException(
@@ -57,10 +66,11 @@ def login(
     user_data: UserLogin,
     db: Session = Depends(get_db)
 ):
-
-    user = db.query(User).filter(
-        User.email == user_data.email
-    ).first()
+    user = (
+        db.query(User)
+        .filter(User.email == user_data.email)
+        .first()
+    )
 
     if not user:
         raise HTTPException(

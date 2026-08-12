@@ -6,9 +6,6 @@ const API_URL = "http://127.0.0.1:8000";
 
 function App() {
   const [page, setPage] = useState("login");
-  const [user, setUser] = useState(null);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -23,6 +20,11 @@ function App() {
     role: "USER",
   });
 
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+
+  const [user, setUser] = useState(null);
+
   // =========================
   // LOGIN
   // =========================
@@ -31,17 +33,12 @@ function App() {
     e.preventDefault();
 
     setMessage("");
-    setLoading(true);
+    setMessageType("");
 
     try {
       const response = await axios.post(
         `${API_URL}/auth/login`,
-        loginData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        loginData
       );
 
       console.log("LOGIN RESPONSE:", response.data);
@@ -49,34 +46,40 @@ function App() {
       const token = response.data.access_token;
 
       if (!token) {
-        throw new Error("Access token not received");
+        setMessage("Login failed. Access token not received.");
+        setMessageType("error");
+        return;
       }
 
+      // Save token
       localStorage.setItem("token", token);
+
+      // Get role from backend response
+      const role = response.data.role;
 
       setUser({
         email: loginData.email,
+        role: role || "USER",
       });
 
       setMessage("");
       setPage("dashboard");
+
     } catch (error) {
       console.error("LOGIN ERROR:", error);
 
       if (error.response) {
         setMessage(
           error.response.data?.detail ||
-            "Invalid email or password."
+          "Invalid email or password."
         );
-      } else if (error.request) {
+      } else {
         setMessage(
           "Cannot connect to backend. Make sure FastAPI is running."
         );
-      } else {
-        setMessage("Login failed. Please try again.");
       }
-    } finally {
-      setLoading(false);
+
+      setMessageType("error");
     }
   };
 
@@ -88,51 +91,50 @@ function App() {
     e.preventDefault();
 
     setMessage("");
-    setLoading(true);
+    setMessageType("");
 
     try {
-      const response = await axios.post(
+      console.log("SIGNUP DATA:", signupData);
+
+      await axios.post(
         `${API_URL}/auth/signup`,
-        signupData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        signupData
       );
-
-      console.log("SIGNUP RESPONSE:", response.data);
-
-      setLoginData({
-        email: signupData.email,
-        password: signupData.password,
-      });
 
       setMessage(
         "Account created successfully! Please login."
       );
 
+      setMessageType("success");
+
+      // Automatically fill login details
+      setLoginData({
+        email: signupData.email,
+        password: signupData.password,
+      });
+
+      // Go to login
       setTimeout(() => {
         setPage("login");
         setMessage("");
+        setMessageType("");
       }, 1500);
+
     } catch (error) {
       console.error("SIGNUP ERROR:", error);
 
       if (error.response) {
         setMessage(
           error.response.data?.detail ||
-            "Signup failed. Please try again."
+          "Signup failed. Please try again."
         );
-      } else if (error.request) {
+      } else {
         setMessage(
           "Cannot connect to backend. Make sure FastAPI is running."
         );
-      } else {
-        setMessage("Signup failed. Please try again.");
       }
-    } finally {
-      setLoading(false);
+
+      setMessageType("error");
     }
   };
 
@@ -142,9 +144,15 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+
     setUser(null);
+
+    setLoginData({
+      email: "",
+      password: "",
+    });
+
     setPage("login");
-    setMessage("");
   };
 
   // =========================
@@ -153,36 +161,36 @@ function App() {
 
   if (page === "login") {
     return (
-      <div className="auth-page">
+      <div className="page">
 
-        <div className="brand-section">
-          <div className="brand-logo">F</div>
+        <div className="auth-box">
 
-          <h1>Fund AI</h1>
+          {/* BRAND */}
+          <div className="brand">
 
-          <p>
-            Empowering ideas.
-            <br />
-            Supporting dreams.
-          </p>
+            <div className="logo">
+              F
+            </div>
 
-          <div className="brand-features">
-            <div>✓ Support meaningful campaigns</div>
-            <div>✓ Discover inspiring ideas</div>
-            <div>✓ Make an impact</div>
-          </div>
-        </div>
+            <h1>Fund AI</h1>
 
-        <div className="auth-card">
+            <p>
+              Empowering ideas. Supporting dreams.
+            </p>
 
-          <div className="card-header">
-            <h2>Welcome back 👋</h2>
-            <p>Login to your Fund AI account</p>
           </div>
 
-          <form onSubmit={handleLogin}>
+          {/* FORM */}
+          <div className="form-section">
 
-            <div className="input-group">
+            <h2>Welcome Back</h2>
+
+            <p className="subtitle">
+              Login to your Fund AI account
+            </p>
+
+            <form onSubmit={handleLogin}>
+
               <label>Email Address</label>
 
               <input
@@ -197,9 +205,7 @@ function App() {
                 }
                 required
               />
-            </div>
 
-            <div className="input-group">
               <label>Password</label>
 
               <input
@@ -214,39 +220,37 @@ function App() {
                 }
                 required
               />
-            </div>
 
-            {message && (
-              <div className="message">
-                {message}
-              </div>
-            )}
+              {message && (
+                <div className={`message ${messageType}`}>
+                  {message}
+                </div>
+              )}
 
-            <button
-              className="primary-btn"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
+              <button type="submit">
+                Login
+              </button>
 
-          </form>
+            </form>
 
-          <div className="switch-auth">
-            <span>Don't have an account?</span>
+            <p className="switch">
+              Don't have an account?
 
-            <button
-              type="button"
-              onClick={() => {
-                setPage("signup");
-                setMessage("");
-              }}
-            >
-              Sign Up
-            </button>
+              <span
+                onClick={() => {
+                  setPage("signup");
+                  setMessage("");
+                  setMessageType("");
+                }}
+              >
+                Sign Up
+              </span>
+            </p>
+
           </div>
 
         </div>
+
       </div>
     );
   }
@@ -257,36 +261,38 @@ function App() {
 
   if (page === "signup") {
     return (
-      <div className="auth-page">
+      <div className="page">
 
-        <div className="brand-section">
-          <div className="brand-logo">F</div>
+        <div className="auth-box">
 
-          <h1>Fund AI</h1>
+          {/* BRAND */}
+          <div className="brand">
 
-          <p>
-            Start supporting
-            <br />
-            meaningful ideas.
-          </p>
+            <div className="logo">
+              F
+            </div>
 
-          <div className="brand-features">
-            <div>✓ Create campaigns</div>
-            <div>✓ Support great ideas</div>
-            <div>✓ Build a better future</div>
-          </div>
-        </div>
+            <h1>Fund AI</h1>
 
-        <div className="auth-card signup-card">
+            <p>
+              Join our community and support great ideas.
+            </p>
 
-          <div className="card-header">
-            <h2>Create Account 🚀</h2>
-            <p>Join the Fund AI community</p>
           </div>
 
-          <form onSubmit={handleSignup}>
+          {/* FORM */}
+          <div className="form-section">
 
-            <div className="input-group">
+            <h2>Create Account</h2>
+
+            <p className="subtitle">
+              Create your Fund AI account
+            </p>
+
+            <form onSubmit={handleSignup}>
+
+              {/* NAME */}
+
               <label>Full Name</label>
 
               <input
@@ -301,9 +307,9 @@ function App() {
                 }
                 required
               />
-            </div>
 
-            <div className="input-group">
+              {/* EMAIL */}
+
               <label>Email Address</label>
 
               <input
@@ -318,14 +324,14 @@ function App() {
                 }
                 required
               />
-            </div>
 
-            <div className="input-group">
-              <label>Phone Number</label>
+              {/* PHONE */}
+
+              <label>Phone</label>
 
               <input
                 type="tel"
-                placeholder="Enter phone number"
+                placeholder="Enter your phone number"
                 value={signupData.phone}
                 onChange={(e) =>
                   setSignupData({
@@ -334,14 +340,14 @@ function App() {
                   })
                 }
               />
-            </div>
 
-            <div className="input-group">
+              {/* PASSWORD */}
+
               <label>Password</label>
 
               <input
                 type="password"
-                placeholder="Create password"
+                placeholder="Create a password"
                 value={signupData.password}
                 onChange={(e) =>
                   setSignupData({
@@ -351,241 +357,424 @@ function App() {
                 }
                 required
               />
-            </div>
 
-            {message && (
-              <div className="message success-message">
-                {message}
+              {/* ========================= */}
+              {/* ROLE SELECTION */}
+              {/* ========================= */}
+
+              <label className="role-title">
+                Register as
+              </label>
+
+              <div className="role-options">
+
+                {/* DONOR */}
+
+                <label
+                  className={
+                    signupData.role === "USER"
+                      ? "role-option active"
+                      : "role-option"
+                  }
+                >
+
+                  <input
+                    type="radio"
+                    name="role"
+                    value="USER"
+                    checked={signupData.role === "USER"}
+                    onChange={(e) =>
+                      setSignupData({
+                        ...signupData,
+                        role: e.target.value,
+                      })
+                    }
+                  />
+
+                  <div className="role-content">
+
+                    <strong>
+                      Donor
+                    </strong>
+
+                    <small>
+                      Support campaigns
+                    </small>
+
+                  </div>
+
+                </label>
+
+                {/* CAMPAIGNER */}
+
+                <label
+                  className={
+                    signupData.role === "CREATOR"
+                      ? "role-option active"
+                      : "role-option"
+                  }
+                >
+
+                  <input
+                    type="radio"
+                    name="role"
+                    value="CREATOR"
+                    checked={signupData.role === "CREATOR"}
+                    onChange={(e) =>
+                      setSignupData({
+                        ...signupData,
+                        role: e.target.value,
+                      })
+                    }
+                  />
+
+                  <div className="role-content">
+
+                    <strong>
+                      Campaigner
+                    </strong>
+
+                    <small>
+                      Create fundraising campaigns
+                    </small>
+
+                  </div>
+
+                </label>
+
               </div>
-            )}
 
-            <button
-              className="primary-btn"
-              type="submit"
-              disabled={loading}
-            >
-              {loading
-                ? "Creating account..."
-                : "Create Account"}
-            </button>
+              {/* MESSAGE */}
 
-          </form>
+              {message && (
+                <div className={`message ${messageType}`}>
+                  {message}
+                </div>
+              )}
 
-          <div className="switch-auth">
-            <span>Already have an account?</span>
+              {/* BUTTON */}
 
-            <button
-              type="button"
-              onClick={() => {
-                setPage("login");
-                setMessage("");
-              }}
-            >
-              Login
-            </button>
+              <button type="submit">
+                Create Account
+              </button>
+
+            </form>
+
+            <p className="switch">
+              Already have an account?
+
+              <span
+                onClick={() => {
+                  setPage("login");
+                  setMessage("");
+                  setMessageType("");
+                }}
+              >
+                Login
+              </span>
+            </p>
+
           </div>
 
         </div>
+
       </div>
     );
   }
 
   // =========================
-  // DASHBOARD
+  // DONOR DASHBOARD
   // =========================
 
-  return (
-    <div className="dashboard">
+  if (user?.role === "USER") {
+    return (
+      <div className="dashboard">
 
-      <nav className="navbar">
+        <nav className="navbar">
 
-        <div className="nav-logo">
-          <div className="small-logo">F</div>
-          <span>Fund AI</span>
-        </div>
+          <div className="nav-brand">
 
-        <div className="nav-right">
-          <span className="user-email">
-            {user?.email}
-          </span>
-
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        </div>
-
-      </nav>
-
-      <main className="dashboard-content">
-
-        <section className="welcome">
-
-          <div>
-            <p className="small-title">
-              FUND AI DASHBOARD
-            </p>
-
-            <h1>
-              Welcome back 👋
-            </h1>
-
-            <p>
-              Discover campaigns and support ideas
-              that make a difference.
-            </p>
-          </div>
-
-          <button className="create-btn">
-            + Create Campaign
-          </button>
-
-        </section>
-
-        <section className="stats">
-
-          <div className="stat-card">
-            <div className="stat-icon">📢</div>
-            <div>
-              <span>Active Campaigns</span>
-              <h2>12</h2>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">💰</div>
-            <div>
-              <span>Total Donations</span>
-              <h2>₹25,000</h2>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">❤️</div>
-            <div>
-              <span>My Donations</span>
-              <h2>₹5,000</h2>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">🎯</div>
-            <div>
-              <span>My Campaigns</span>
-              <h2>3</h2>
-            </div>
-          </div>
-
-        </section>
-
-        <section className="campaign-section">
-
-          <div className="section-heading">
-
-            <div>
-              <h2>Featured Campaigns</h2>
-              <p>
-                Support campaigns that matter
-              </p>
+            <div className="small-logo">
+              F
             </div>
 
-            <button className="view-btn">
-              View All →
+            <strong>
+              Fund AI
+            </strong>
+
+          </div>
+
+          <div className="nav-user">
+
+            <span>
+              {user?.email}
+            </span>
+
+            <button
+              className="logout"
+              onClick={handleLogout}
+            >
+              Logout
             </button>
 
           </div>
 
-          <div className="campaign-grid">
+        </nav>
 
-            <div className="campaign-card">
+        <main className="dashboard-main">
 
-              <div className="campaign-image">
-                🌱
-              </div>
+          <h1>
+            Welcome Donor 👋
+          </h1>
 
-              <div className="campaign-body">
+          <p className="dashboard-subtitle">
+            Discover campaigns and support meaningful ideas.
+          </p>
 
-                <span className="category">
-                  Environment
-                </span>
+          <div className="dashboard-cards">
 
-                <h3>
-                  Green Future Project
-                </h3>
+            <div className="dashboard-card">
+              <h3>
+                🔎 Explore Campaigns
+              </h3>
 
-                <p>
-                  Help us create a greener and
-                  healthier environment.
-                </p>
-
-                <div className="progress">
-                  <div
-                    className="progress-fill"
-                    style={{ width: "75%" }}
-                  ></div>
-                </div>
-
-                <div className="campaign-amount">
-                  <strong>₹75,000</strong>
-                  <span>of ₹1,00,000</span>
-                </div>
-
-                <button className="support-btn">
-                  Support Campaign
-                </button>
-
-              </div>
-
+              <p>
+                Find campaigns that you want to support.
+              </p>
             </div>
 
-            <div className="campaign-card">
+            <div className="dashboard-card">
+              <h3>
+                💰 My Donations
+              </h3>
 
-              <div className="campaign-image purple">
-                🎓
-              </div>
+              <p>
+                View your donation history.
+              </p>
+            </div>
 
-              <div className="campaign-body">
+            <div className="dashboard-card">
+              <h3>
+                ❤️ Supported Campaigns
+              </h3>
 
-                <span className="category">
-                  Education
-                </span>
-
-                <h3>
-                  Education For All
-                </h3>
-
-                <p>
-                  Support education opportunities
-                  for deserving students.
-                </p>
-
-                <div className="progress">
-                  <div
-                    className="progress-fill"
-                    style={{ width: "67%" }}
-                  ></div>
-                </div>
-
-                <div className="campaign-amount">
-                  <strong>₹40,000</strong>
-                  <span>of ₹60,000</span>
-                </div>
-
-                <button className="support-btn">
-                  Support Campaign
-                </button>
-
-              </div>
-
+              <p>
+                Track campaigns you have supported.
+              </p>
             </div>
 
           </div>
 
-        </section>
+        </main>
 
-      </main>
+      </div>
+    );
+  }
+
+  // =========================
+  // CAMPAIGNER DASHBOARD
+  // =========================
+
+  if (user?.role === "CREATOR") {
+    return (
+      <div className="dashboard">
+
+        <nav className="navbar">
+
+          <div className="nav-brand">
+
+            <div className="small-logo">
+              F
+            </div>
+
+            <strong>
+              Fund AI
+            </strong>
+
+          </div>
+
+          <div className="nav-user">
+
+            <span>
+              {user?.email}
+            </span>
+
+            <button
+              className="logout"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+
+          </div>
+
+        </nav>
+
+        <main className="dashboard-main">
+
+          <h1>
+            Welcome Campaigner 🚀
+          </h1>
+
+          <p className="dashboard-subtitle">
+            Create and manage your fundraising campaigns.
+          </p>
+
+          <div className="dashboard-cards">
+
+            <div className="dashboard-card">
+              <h3>
+                ➕ Create Campaign
+              </h3>
+
+              <p>
+                Start a new fundraising campaign.
+              </p>
+            </div>
+
+            <div className="dashboard-card">
+              <h3>
+                📢 My Campaigns
+              </h3>
+
+              <p>
+                View and manage your campaigns.
+              </p>
+            </div>
+
+            <div className="dashboard-card">
+              <h3>
+                💰 Campaign Donations
+              </h3>
+
+              <p>
+                Track donations received for your campaigns.
+              </p>
+            </div>
+
+          </div>
+
+        </main>
+
+      </div>
+    );
+  }
+
+  // =========================
+  // ADMIN DASHBOARD
+  // =========================
+
+  if (user?.role === "ADMIN") {
+    return (
+      <div className="dashboard">
+
+        <nav className="navbar">
+
+          <div className="nav-brand">
+
+            <div className="small-logo">
+              F
+            </div>
+
+            <strong>
+              Fund AI Admin
+            </strong>
+
+          </div>
+
+          <div className="nav-user">
+
+            <span>
+              {user?.email}
+            </span>
+
+            <button
+              className="logout"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+
+          </div>
+
+        </nav>
+
+        <main className="dashboard-main">
+
+          <h1>
+            Welcome Admin 🛡️
+          </h1>
+
+          <p className="dashboard-subtitle">
+            Manage the Fund AI platform.
+          </p>
+
+          <div className="dashboard-cards">
+
+            <div className="dashboard-card">
+              <h3>
+                👥 Users
+              </h3>
+
+              <p>
+                Manage registered users.
+              </p>
+            </div>
+
+            <div className="dashboard-card">
+              <h3>
+                📢 Campaigns
+              </h3>
+
+              <p>
+                Manage fundraising campaigns.
+              </p>
+            </div>
+
+            <div className="dashboard-card">
+              <h3>
+                💳 Payments
+              </h3>
+
+              <p>
+                Monitor donations and payments.
+              </p>
+            </div>
+
+          </div>
+
+        </main>
+
+      </div>
+    );
+  }
+
+  // =========================
+  // FALLBACK
+  // =========================
+
+  return (
+    <div className="page">
+
+      <div className="auth-box">
+
+        <div className="form-section">
+
+          <h2>
+            Unknown User Role
+          </h2>
+
+          <p>
+            Please contact the administrator.
+          </p>
+
+          <button onClick={handleLogout}>
+            Back to Login
+          </button>
+
+        </div>
+
+      </div>
 
     </div>
   );
