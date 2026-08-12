@@ -12,7 +12,7 @@ class UserSignup(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: str
+    role: str = "USER"
     phone: Optional[str] = None
 
 
@@ -62,6 +62,15 @@ class CampaignResponse(BaseModel):
     end_date: Optional[datetime] = None
     status: str
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# DONATION SCHEMAS
+# =========================
+
 class DonationCreate(BaseModel):
     campaign_id: int
     donor_id: int
@@ -82,6 +91,14 @@ class DonationResponse(BaseModel):
     transaction_id: Optional[str] = None
     status: str
 
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# COMMENT SCHEMAS
+# =========================
+
 class CommentCreate(BaseModel):
     campaign_id: int
     user_id: int
@@ -94,6 +111,15 @@ class CommentResponse(BaseModel):
     user_id: int
     content: str
     commented_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# REWARD SCHEMAS
+# =========================
+
 class RewardCreate(BaseModel):
     campaign_id: int
     title: str
@@ -111,6 +137,14 @@ class RewardResponse(BaseModel):
     min_amount: Decimal
     quantity: int
     available_quantity: int
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# PAYMENT SCHEMAS
+# =========================
 
 class PaymentCreate(BaseModel):
     donation_id: int
@@ -130,6 +164,3 @@ class PaymentResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-

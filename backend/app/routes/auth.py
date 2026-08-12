@@ -13,8 +13,15 @@ router = APIRouter(
 )
 
 
+# =========================
+# SIGNUP
+# =========================
+
 @router.post("/signup", response_model=UserResponse)
-def signup(user_data: UserSignup, db: Session = Depends(get_db)):
+def signup(
+    user_data: UserSignup,
+    db: Session = Depends(get_db)
+):
 
     existing_user = db.query(User).filter(
         User.email == user_data.email
@@ -41,8 +48,15 @@ def signup(user_data: UserSignup, db: Session = Depends(get_db)):
     return new_user
 
 
+# =========================
+# LOGIN
+# =========================
+
 @router.post("/login", response_model=TokenResponse)
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
+def login(
+    user_data: UserLogin,
+    db: Session = Depends(get_db)
+):
 
     user = db.query(User).filter(
         User.email == user_data.email
@@ -54,7 +68,10 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
 
-    if not verify_password(user_data.password, user.password):
+    if not verify_password(
+        user_data.password,
+        user.password
+    ):
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
