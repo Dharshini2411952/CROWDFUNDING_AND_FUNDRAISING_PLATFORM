@@ -1,9 +1,22 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
-DATABASE_URL = "mysql+pymysql://root:Dharshini24%40mysql@localhost:3306/Fund_ai"
 
-engine = create_engine(DATABASE_URL)
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL must be configured in the backend environment")
+
+
+engine = create_engine(
+    DATABASE_URL,
+    echo=True
+)
+
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -11,12 +24,15 @@ SessionLocal = sessionmaker(
     bind=engine
 )
 
+
 Base = declarative_base()
 
 
 def get_db():
     db = SessionLocal()
+
     try:
         yield db
+
     finally:
         db.close()

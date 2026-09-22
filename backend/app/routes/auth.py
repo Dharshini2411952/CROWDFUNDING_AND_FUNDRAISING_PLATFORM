@@ -1,19 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.model import User
-from app.schemas import (
-    UserSignup,
-    UserLogin,
-    UserResponse,
-    TokenResponse
-)
-from app.utils import (
+from app.core.database import get_db
+from app.core.security import (
     hash_password,
     verify_password,
     create_access_token
 )
+
+from app.models.user import User
+
+from app.schemas.auth import (
+    SignupRequest,
+    LoginRequest,
+    UserResponse
+)
+
 
 router = APIRouter(
     prefix="/auth",
@@ -21,18 +23,18 @@ router = APIRouter(
 )
 
 
-# =========================
-# SIGNUP
-# =========================
-
-@router.post("/signup", response_model=UserResponse)
+@router.post(
+    "/signup",
+    response_model=UserResponse
+)
 def signup(
-    user_data: UserSignup,
+    user: SignupRequest,
     db: Session = Depends(get_db)
 ):
+
     existing_user = (
         db.query(User)
-        .filter(User.email == user_data.email)
+        .filter(User.email == user.email)
         .first()
     )
 
@@ -42,33 +44,50 @@ def signup(
             detail="Email already registered"
         )
 
+    hashed_password = hash_password(
+        user.password
+    )
+
     new_user = User(
-        name=user_data.name,
-        email=user_data.email,
-        password=hash_password(user_data.password),
-        role=user_data.role,
-        phone=user_data.phone
+        name=user.name,
+        email=user.email,
+        password=hashed_password,
+        role=user.role,
+        phone=user.phone
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    return new_user
+    access_token = create_access_token(
+        user_id=new_user.user_id,
+        role=new_user.role
+    )
+
+    return {
+        "user_id": new_user.user_id,
+        "name": new_user.name,
+        "email": new_user.email,
+        "role": new_user.role,
+        "phone": new_user.phone,
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
-# =========================
-# LOGIN
-# =========================
-
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=UserResponse
+)
 def login(
-    user_data: UserLogin,
+    login_data: LoginRequest,
     db: Session = Depends(get_db)
 ):
+
     user = (
         db.query(User)
-        .filter(User.email == user_data.email)
+        .filter(User.email == login_data.email)
         .first()
     )
 
@@ -79,7 +98,7 @@ def login(
         )
 
     if not verify_password(
-        user_data.password,
+        login_data.password,
         user.password
     ):
         raise HTTPException(
@@ -87,13 +106,17 @@ def login(
             detail="Invalid email or password"
         )
 
-    access_token = create_access_token({
-        "user_id": user.user_id,
-        "email": user.email,
-        "role": user.role
-    })
+    access_token = create_access_token(
+        user_id=user.user_id,
+        role=user.role
+    )
 
     return {
+        "user_id": user.user_id,
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+        "phone": user.phone,
         "access_token": access_token,
         "token_type": "bearer"
-    }
+    }
