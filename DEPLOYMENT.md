@@ -14,50 +14,33 @@ This guide provides step-by-step instructions for deploying the **Fund AI** appl
 
 ## 2. Step-by-Step Deployment Procedure
 
-### Step 1: Deploy Managed MySQL Database
-1. Provision a MySQL database instance.
-2. Create the production database:
-```sql
-CREATE DATABASE fund_ai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-3. Copy the database connection URL:
-```
-mysql+pymysql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/fund_ai
-```
-*(Do NOT commit this connection URL to Git).*
+### Step 1: Provision Aiven Database (MySQL or PostgreSQL)
+1. Create a database instance on **Aiven** (MySQL or PostgreSQL).
+2. Get your Service URI from Aiven (e.g. `mysql://avnadmin:pass@host:port/defaultdb?ssl-mode=REQUIRED` or `postgres://...`).
+   *(The backend automatically normalizes `mysql://` to `mysql+pymysql://` and `postgres://` to `postgresql://`).*
 
 ---
 
-### Step 2: Deploy FastAPI Backend (Render / Railway)
-1. Connect your repository to Render/Railway and select the `backend/` directory as root.
-2. Set Environment Variables in your hosting dashboard:
-   - `DATABASE_URL`: Your managed MySQL connection URL.
-   - `SECRET_KEY`: A secure random 64-character string.
-   - `ALGORITHM`: `HS256`
-   - `ACCESS_TOKEN_EXPIRE_MINUTES`: `1440`
-   - `CORS_ORIGINS`: `https://your-frontend-domain.vercel.app`
-3. Configure Build & Start Commands:
+### Step 2: Deploy FastAPI Backend (Render)
+1. Create a Web Service on Render and select the `backend/` directory as root directory.
+2. Configure Build & Start Commands:
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Deploy the backend service.
-5. Verify health check by visiting:
-   ```
-   GET https://your-backend-domain.onrender.com/
-   ```
-   Should return: `{"message": "Fund AI Backend is running", "status": "success"}`
+3. Set Environment Variables in Render Backend Dashboard:
+   - `DATABASE_URL`: Your Aiven database URI (e.g. `mysql+pymysql://avnadmin:...@...aivencloud.com:12345/defaultdb?ssl_mode=REQUIRED`)
+   - `SECRET_KEY`: A secure random string (e.g., generated via `openssl rand -hex 32`)
+   - `CORS_ORIGINS`: `https://your-frontend-name.onrender.com` (or `*` to allow all origins)
 
 ---
 
-### Step 3: Deploy React Frontend (Vercel / Netlify)
-1. Import the repository into Vercel/Netlify.
-2. Set the Root Directory to `frontend/`.
-3. Set Build Settings:
-   - **Framework Preset**: Vite
+### Step 3: Deploy React Frontend (Render / Vercel)
+1. Create a Static Site on Render (or Vercel) with root directory `frontend/`.
+2. Configure Build Settings:
    - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-4. Set Environment Variables:
-   - `VITE_API_URL`: `https://your-backend-domain.onrender.com`
-5. Deploy the site.
+   - **Publish Directory**: `dist`
+3. Set Environment Variables **BEFORE** building:
+   - `VITE_API_URL`: `https://your-backend-name.onrender.com` *(Must be set during build time in Render environment variables so Vite embeds your backend URL).*
+
 
 ---
 

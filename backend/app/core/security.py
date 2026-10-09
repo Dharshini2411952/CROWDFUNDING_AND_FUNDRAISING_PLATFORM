@@ -20,6 +20,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY must be configured in the backend environment")
 
+# Prevent passlib AttributeError on bcrypt >= 4.1.0 where __about__ was removed
+try:
+    import bcrypt
+    if not hasattr(bcrypt, "__about__") and hasattr(bcrypt, "__version__"):
+        bcrypt.__about__ = type("about", (), {"__version__": bcrypt.__version__})()
+except Exception:
+    pass
 
 pwd_context = CryptContext(
     schemes=["bcrypt", "argon2"],
@@ -31,7 +38,12 @@ security = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    try:
+        return pwd_context.hash(password)
+    except Exception:
+        import bcrypt
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
 def verify_password(
@@ -44,7 +56,14 @@ def verify_password(
             hashed_password
         )
     except Exception:
-        return plain_password == hashed_password
+        try:
+            import bcrypt
+            return bcrypt.checkpw(
+                plain_password.encode("utf-8"),
+                hashed_password.encode("utf-8")
+            )
+        except Exception:
+            return plain_password == hashed_password
 
 
 

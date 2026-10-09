@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,9 +13,6 @@ from app.routes.payments import router as payments_router
 from app.routes.saved_campaigns import router as saved_campaigns_router
 
 
-Base.metadata.create_all(bind=engine)
-
-
 app = FastAPI(
     title="Fund AI API",
     description="Crowdfunding and Fundraising Platform API",
@@ -22,19 +20,35 @@ app = FastAPI(
 )
 
 
-import os
+@app.on_event("startup")
+def startup_db_init():
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables initialized successfully.")
+    except Exception as exc:
+        print(f"Startup DB Error (Check DATABASE_URL & Aiven connectivity): {exc}")
+
 
 raw_cors = os.getenv("CORS_ORIGINS", "")
-allowed_origins = [origin.strip() for origin in raw_cors.split(",") if origin.strip()]
-if not allowed_origins:
-    allowed_origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175"
+parsed_origins = [origin.strip().rstrip("/") for origin in raw_cors.split(",") if origin.strip()]
+
+if not parsed_origins or "*" in parsed_origins:
+    allowed_origins = ["*"]
+else:
+    expanded = set()
+    for origin in parsed_origins:
+        expanded.add(origin)
+        expanded.add(origin + "/")
+    # Always allow local dev ports in case of local testing
+    local_defaults = [
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:5174", "http://127.0.0.1:5174",
+        "http://localhost:5175", "http://127.0.0.1:5175"
     ]
+    for loc in local_defaults:
+        expanded.add(loc)
+        expanded.add(loc + "/")
+    allowed_origins = list(expanded)
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,4 +74,4 @@ def root():
     return {
         "message": "Fund AI Backend is running",
         "status": "success"
-    }
+    }

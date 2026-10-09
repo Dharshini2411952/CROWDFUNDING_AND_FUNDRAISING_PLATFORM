@@ -53,7 +53,8 @@ def signup(
         email=user.email,
         password=hashed_password,
         role=user.role,
-        phone=user.phone
+        phone=user.phone,
+        is_active=True
     )
 
     db.add(new_user)
