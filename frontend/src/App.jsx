@@ -9,6 +9,7 @@ function App() {
     email: "",
     password: "",
   });
+  const [loginErrors, setLoginErrors] = useState({ email: "", password: "" });
 
   const [signupData, setSignupData] = useState({
     name: "",
@@ -17,6 +18,19 @@ function App() {
     phone: "",
     role: "DONOR",
   });
+  const [signupErrors, setSignupErrors] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+  const [signupTouched, setSignupTouched] = useState({
+    name: false,
+    email: false,
+    phone: false,
+    password: false,
+  });
+  const [loginTouched, setLoginTouched] = useState({ email: false, password: false });
 
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
@@ -114,6 +128,87 @@ function App() {
   const clearMessage = () => {
     setMessage("");
     setMessageType("");
+  };
+
+  /* ================================
+     VALIDATION HELPERS
+  ================================= */
+
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_REGEX = /^\d{10}$/;
+  const HAS_UPPER = /[A-Z]/;
+  const HAS_NUMBER = /[0-9]/;
+  const HAS_SPECIAL = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/;
+
+  const validateSignupField = (field, value) => {
+    switch (field) {
+      case "name":
+        if (!value.trim()) return "Full name is required.";
+        return "";
+      case "email": {
+        const v = value.trim().toLowerCase();
+        if (!v) return "Email is required.";
+        if (!EMAIL_REGEX.test(v)) return "Please enter a valid email address.";
+        return "";
+      }
+      case "phone": {
+        const v = value.trim();
+        if (!v) return "Phone number is required.";
+        if (!PHONE_REGEX.test(v)) return "Phone number must contain exactly 10 digits.";
+        return "";
+      }
+      case "password": {
+        const issues = [];
+        if (value.length < 8) issues.push("at least 8 characters");
+        if (!HAS_UPPER.test(value)) issues.push("one uppercase letter");
+        if (!HAS_NUMBER.test(value)) issues.push("one number");
+        if (!HAS_SPECIAL.test(value)) issues.push("one special character");
+        if (issues.length > 0)
+          return "Password must contain " + issues.join(", ") + ".";
+        return "";
+      }
+      default:
+        return "";
+    }
+  };
+
+  const validateLoginField = (field, value) => {
+    switch (field) {
+      case "email": {
+        const v = value.trim().toLowerCase();
+        if (!v) return "Email is required.";
+        if (!EMAIL_REGEX.test(v)) return "Please enter a valid email address.";
+        return "";
+      }
+      case "password":
+        if (!value) return "Password is required.";
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  const getSignupPasswordRules = (password) => [
+    { label: "At least 8 characters", passed: password.length >= 8 },
+    { label: "One uppercase letter (A–Z)", passed: HAS_UPPER.test(password) },
+    { label: "One number (0–9)", passed: HAS_NUMBER.test(password) },
+    { label: "One special character (!@#$%...)", passed: HAS_SPECIAL.test(password) },
+  ];
+
+  const isSignupValid = () => {
+    return (
+      !validateSignupField("name", signupData.name) &&
+      !validateSignupField("email", signupData.email) &&
+      !validateSignupField("phone", signupData.phone) &&
+      !validateSignupField("password", signupData.password)
+    );
+  };
+
+  const isLoginValid = () => {
+    return (
+      !validateLoginField("email", loginData.email) &&
+      !validateLoginField("password", loginData.password)
+    );
   };
 
   const getCampaignIcon = (category) => {
@@ -477,11 +572,19 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     clearMessage();
+
+    // Mark all fields touched
+    setLoginTouched({ email: true, password: true });
+    const emailErr = validateLoginField("email", loginData.email);
+    const pwErr = validateLoginField("password", loginData.password);
+    setLoginErrors({ email: emailErr, password: pwErr });
+    if (emailErr || pwErr) return;
+
     setLoading(true);
 
     try {
       const response = await api.post("/auth/login", {
-        email: loginData.email.trim(),
+        email: loginData.email.trim().toLowerCase(),
         password: loginData.password,
       });
 
@@ -510,7 +613,6 @@ function App() {
       }, 600);
     } catch (error) {
       console.error("LOGIN ERROR:", error);
-      // Show specific 401 message for deactivated accounts
       if (error.response?.status === 401) {
         const detail = error.response?.data?.detail || "";
         if (detail.toLowerCase().includes("deactivated")) {
@@ -527,33 +629,44 @@ function App() {
   };
 
 
+
   const handleSignup = async (e) => {
     e.preventDefault();
     clearMessage();
+
+    // Mark all fields touched and validate
+    const allTouched = { name: true, email: true, phone: true, password: true };
+    setSignupTouched(allTouched);
+    const errs = {
+      name: validateSignupField("name", signupData.name),
+      email: validateSignupField("email", signupData.email),
+      phone: validateSignupField("phone", signupData.phone),
+      password: validateSignupField("password", signupData.password),
+    };
+    setSignupErrors(errs);
+    if (errs.name || errs.email || errs.phone || errs.password) return;
+
     setLoading(true);
 
     try {
+      const normalizedEmail = signupData.email.trim().toLowerCase();
       await api.post("/auth/signup", {
         name: signupData.name.trim(),
-        email: signupData.email.trim(),
+        email: normalizedEmail,
         password: signupData.password,
-        phone: signupData.phone.trim() || undefined,
+        phone: signupData.phone.trim(),
         role: signupData.role,
       });
 
       showMessage("Account created successfully! Please sign in.", "success");
       setLoginData({
-        email: signupData.email.trim(),
+        email: normalizedEmail,
         password: "",
       });
 
-      setSignupData({
-        name: "",
-        email: "",
-        password: "",
-        phone: "",
-        role: "DONOR",
-      });
+      setSignupData({ name: "", email: "", password: "", phone: "", role: "DONOR" });
+      setSignupErrors({ name: "", email: "", phone: "", password: "" });
+      setSignupTouched({ name: false, email: false, phone: false, password: false });
 
       setTimeout(() => {
         setPage("login");
@@ -561,11 +674,23 @@ function App() {
       }, 1000);
     } catch (error) {
       console.error("SIGNUP ERROR:", error);
-      showMessage(getErrorMessage(error, "Signup failed."), "error");
+      const status = error.response?.status;
+      if (status === 400) {
+        const detail = error.response?.data?.detail || "";
+        if (detail.toLowerCase().includes("already")) {
+          setSignupErrors((prev) => ({ ...prev, email: "This email is already registered. Please sign in." }));
+          showMessage("This email is already registered. Please sign in.", "error");
+        } else {
+          showMessage(detail || "Signup failed.", "error");
+        }
+      } else {
+        showMessage(getErrorMessage(error, "Signup failed."), "error");
+      }
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleLogout = () => {
     localStorage.clear();
@@ -881,39 +1006,60 @@ function App() {
                 </div>
               )}
 
-              <form onSubmit={handleLogin}>
+              <form onSubmit={handleLogin} noValidate>
                 <div className="input-group">
                   <label>Email Address</label>
-                  <div className="input-wrapper">
+                  <div className={`input-wrapper${loginErrors.email && loginTouched.email ? " input-error" : ""}`}>
                     <span className="input-icon">✉</span>
                     <input
                       type="email"
+                      id="login-email"
                       placeholder="Enter your email"
                       value={loginData.email}
-                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                      required
+                      onChange={(e) => {
+                        setLoginData({ ...loginData, email: e.target.value });
+                        if (loginTouched.email) setLoginErrors((p) => ({ ...p, email: validateLoginField("email", e.target.value) }));
+                      }}
+                      onBlur={() => {
+                        setLoginTouched((p) => ({ ...p, email: true }));
+                        setLoginErrors((p) => ({ ...p, email: validateLoginField("email", loginData.email) }));
+                      }}
                     />
                   </div>
+                  {loginErrors.email && loginTouched.email && (
+                    <p className="field-error">{loginErrors.email}</p>
+                  )}
                 </div>
 
                 <div className="input-group">
                   <label>Password</label>
-                  <div className="input-wrapper">
+                  <div className={`input-wrapper${loginErrors.password && loginTouched.password ? " input-error" : ""}`}>
                     <span className="input-icon">🔒</span>
                     <input
                       type="password"
+                      id="login-password"
                       placeholder="Enter your password"
                       value={loginData.password}
-                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      required
+                      onChange={(e) => {
+                        setLoginData({ ...loginData, password: e.target.value });
+                        if (loginTouched.password) setLoginErrors((p) => ({ ...p, password: validateLoginField("password", e.target.value) }));
+                      }}
+                      onBlur={() => {
+                        setLoginTouched((p) => ({ ...p, password: true }));
+                        setLoginErrors((p) => ({ ...p, password: validateLoginField("password", loginData.password) }));
+                      }}
                     />
                   </div>
+                  {loginErrors.password && loginTouched.password && (
+                    <p className="field-error">{loginErrors.password}</p>
+                  )}
                 </div>
 
                 <button type="submit" className="main-btn" disabled={loading}>
                   {loading ? "Signing in..." : "Sign In"}
                 </button>
               </form>
+
 
               <div className="divider"><span>OR</span></div>
 
@@ -966,60 +1112,110 @@ function App() {
                 </div>
               )}
 
-              <form onSubmit={handleSignup}>
+              <form onSubmit={handleSignup} noValidate>
                 <div className="input-group">
-                  <label>Full Name</label>
-                  <div className="input-wrapper">
+                  <label htmlFor="signup-name">Full Name</label>
+                  <div className={`input-wrapper${signupErrors.name && signupTouched.name ? " input-error" : ""}`}>
                     <span className="input-icon">👤</span>
                     <input
                       type="text"
+                      id="signup-name"
                       placeholder="Enter your full name"
                       value={signupData.name}
-                      onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                      required
+                      onChange={(e) => {
+                        setSignupData({ ...signupData, name: e.target.value });
+                        if (signupTouched.name) setSignupErrors((p) => ({ ...p, name: validateSignupField("name", e.target.value) }));
+                      }}
+                      onBlur={() => {
+                        setSignupTouched((p) => ({ ...p, name: true }));
+                        setSignupErrors((p) => ({ ...p, name: validateSignupField("name", signupData.name) }));
+                      }}
                     />
                   </div>
+                  {signupErrors.name && signupTouched.name && (
+                    <p className="field-error">{signupErrors.name}</p>
+                  )}
                 </div>
 
                 <div className="input-group">
-                  <label>Email Address</label>
-                  <div className="input-wrapper">
+                  <label htmlFor="signup-email">Email Address</label>
+                  <div className={`input-wrapper${signupErrors.email && signupTouched.email ? " input-error" : ""}`}>
                     <span className="input-icon">✉</span>
                     <input
                       type="email"
+                      id="signup-email"
                       placeholder="Enter your email"
                       value={signupData.email}
-                      onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                      required
+                      onChange={(e) => {
+                        setSignupData({ ...signupData, email: e.target.value });
+                        if (signupTouched.email) setSignupErrors((p) => ({ ...p, email: validateSignupField("email", e.target.value) }));
+                      }}
+                      onBlur={() => {
+                        setSignupTouched((p) => ({ ...p, email: true }));
+                        setSignupErrors((p) => ({ ...p, email: validateSignupField("email", signupData.email) }));
+                      }}
                     />
                   </div>
+                  {signupErrors.email && signupTouched.email && (
+                    <p className="field-error">{signupErrors.email}</p>
+                  )}
                 </div>
 
                 <div className="input-group">
-                  <label>Phone Number</label>
-                  <div className="input-wrapper">
+                  <label htmlFor="signup-phone">Phone Number</label>
+                  <div className={`input-wrapper${signupErrors.phone && signupTouched.phone ? " input-error" : ""}`}>
                     <span className="input-icon">☎</span>
                     <input
                       type="tel"
-                      placeholder="Enter phone number"
+                      id="signup-phone"
+                      placeholder="Enter 10-digit phone number"
                       value={signupData.phone}
-                      onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                      maxLength={10}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setSignupData({ ...signupData, phone: val });
+                        if (signupTouched.phone) setSignupErrors((p) => ({ ...p, phone: validateSignupField("phone", val) }));
+                      }}
+                      onBlur={() => {
+                        setSignupTouched((p) => ({ ...p, phone: true }));
+                        setSignupErrors((p) => ({ ...p, phone: validateSignupField("phone", signupData.phone) }));
+                      }}
                     />
                   </div>
+                  {signupErrors.phone && signupTouched.phone && (
+                    <p className="field-error">{signupErrors.phone}</p>
+                  )}
                 </div>
 
                 <div className="input-group">
-                  <label>Password</label>
-                  <div className="input-wrapper">
+                  <label htmlFor="signup-password">Password</label>
+                  <div className={`input-wrapper${signupErrors.password && signupTouched.password ? " input-error" : ""}`}>
                     <span className="input-icon">🔒</span>
                     <input
                       type="password"
+                      id="signup-password"
                       placeholder="Create a password"
                       value={signupData.password}
-                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                      minLength="6"
-                      required
+                      onChange={(e) => {
+                        setSignupData({ ...signupData, password: e.target.value });
+                        if (signupTouched.password) setSignupErrors((p) => ({ ...p, password: validateSignupField("password", e.target.value) }));
+                      }}
+                      onBlur={() => {
+                        setSignupTouched((p) => ({ ...p, password: true }));
+                        setSignupErrors((p) => ({ ...p, password: validateSignupField("password", signupData.password) }));
+                      }}
                     />
+                  </div>
+                  {signupErrors.password && signupTouched.password && (
+                    <p className="field-error">{signupErrors.password}</p>
+                  )}
+                  <div className="password-rules">
+                    {getSignupPasswordRules(signupData.password).map((rule) => (
+                      <div key={rule.label} className={`password-rule${rule.passed ? " passed" : ""}`}>
+                        <span className="rule-icon">{rule.passed ? "✓" : "○"}</span>
+                        {rule.label}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1048,6 +1244,7 @@ function App() {
                   {loading ? "Creating Account..." : "Create Account"}
                 </button>
               </form>
+
 
               <div className="divider"><span>OR</span></div>
 

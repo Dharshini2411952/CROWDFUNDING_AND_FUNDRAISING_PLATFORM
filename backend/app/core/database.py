@@ -26,10 +26,10 @@ if "mysql+pymysql://" in url:
     ssl_mode_val = "REQUIRED"
 
     for key in list(query_params.keys()):
-        if key in ("ssl-mode", "ssl_mode", "ssl"):
+        if key.lower() in ("ssl-mode", "ssl_mode", "ssl", "sslmode", "ssl_ca", "ssl-ca", "ssl_cert", "ssl-cert"):
             vals = query_params.pop(key)
             if vals:
-                v = vals[0].upper()
+                v = str(vals[0]).upper()
                 if v in ("REQUIRED", "TRUE", "1", "VERIFY_CA", "VERIFY_IDENTITY", "PREFERRED"):
                     needs_ssl = True
                     if v in ("VERIFY_CA", "VERIFY_IDENTITY"):
@@ -39,8 +39,8 @@ if "mysql+pymysql://" in url:
     parsed = parsed._replace(query=new_query)
     url = urlunparse(parsed)
 
-    if needs_ssl:
-        connect_args["ssl"] = {"ssl_mode": ssl_mode_val}
+    if needs_ssl or "aivencloud.com" in url:
+        connect_args["ssl"] = {"ssl_mode": ssl_mode_val, "check_hostname": False}
 
 DATABASE_URL = url
 

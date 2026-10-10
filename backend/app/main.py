@@ -1,6 +1,8 @@
 import os
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.database import Base, engine
 from app.routes.admin import router as admin_router
@@ -18,6 +20,22 @@ app = FastAPI(
     description="Crowdfunding and Fundraising Platform API",
     version="1.0.0"
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    errors = exc.errors()
+    messages = []
+    for err in errors:
+        msg = err.get("msg", "")
+        if msg.startswith("Value error, "):
+            msg = msg[13:]
+        messages.append(msg)
+    detail_msg = ", ".join(messages) if messages else "Validation error"
+    return JSONResponse(
+        status_code=422,
+        content={"detail": detail_msg}
+    )
 
 
 @app.on_event("startup")
