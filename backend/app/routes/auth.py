@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -58,9 +59,22 @@ def signup(
         is_active=True
     )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Database operation failed. Please try again."
+        )
 
     access_token = create_access_token(
         user_id=new_user.user_id,
@@ -108,6 +122,12 @@ def login(
             detail="Invalid email or password"
         )
 
+    if not getattr(user, "is_active", True):
+        raise HTTPException(
+            status_code=401,
+            detail="Account is deactivated. Contact admin."
+        )
+
     access_token = create_access_token(
         user_id=user.user_id,
         role=user.role
@@ -121,4 +141,4 @@ def login(
         "phone": user.phone,
         "access_token": access_token,
         "token_type": "bearer"
-    }
+    }

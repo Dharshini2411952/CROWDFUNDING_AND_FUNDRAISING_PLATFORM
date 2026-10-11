@@ -1,7 +1,10 @@
 import axios from "axios";
 
 const rawApiUrl = import.meta.env.VITE_API_URL;
-const baseURL = rawApiUrl ? rawApiUrl.replace(/\/+$/, "") : "http://127.0.0.1:8000";
+const defaultUrl = import.meta.env.PROD
+  ? "https://crowdfunding-and-fundraising-platform.onrender.com"
+  : "http://127.0.0.1:8000";
+const baseURL = (rawApiUrl ? rawApiUrl.replace(/\/+$/, "") : defaultUrl).replace(/\/+$/, "");
 
 const api = axios.create({
   baseURL,

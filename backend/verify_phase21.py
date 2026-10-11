@@ -86,19 +86,19 @@ def run():
     print("\n--- Signup: duplicate email ---")
     r = post("/auth/signup", {"name": valid_name, "email": valid_email,
                               "password": valid_password, "phone": valid_phone, "role": "DONOR"})
-    if r and r.status_code == 400:
+    if r is not None and r.status_code == 400:
         ok("Duplicate email rejected (HTTP 400)")
     else:
-        fail("Duplicate email rejected", f"status={r.status_code if r else 'None'}")
+        fail("Duplicate email rejected", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Signup: invalid email format ──────────────────────────────
     print("\n--- Signup: invalid email format ---")
     r = post("/auth/signup", {"name": valid_name, "email": "notanemail",
                               "password": valid_password, "phone": valid_phone, "role": "DONOR"})
-    if r and r.status_code in (400, 422):
+    if r is not None and r.status_code in (400, 422):
         ok("Invalid email format rejected")
     else:
-        fail("Invalid email format rejected", f"status={r.status_code if r else 'None'}")
+        fail("Invalid email format rejected", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Signup: phone validation ──────────────────────────────────
     print("\n--- Signup: phone validation ---")
@@ -113,10 +113,10 @@ def run():
     for phone_val, desc in bad_phones:
         r = post("/auth/signup", {"name": valid_name, "email": f"ph_{uuid.uuid4().hex[:4]}@example.com",
                                   "password": valid_password, "phone": phone_val, "role": "DONOR"})
-        if r and r.status_code in (400, 422):
+        if r is not None and r.status_code in (400, 422):
             ok(f"Phone '{desc}' rejected")
         else:
-            fail(f"Phone '{desc}' rejected", f"status={r.status_code if r else 'None'}")
+            fail(f"Phone '{desc}' rejected", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Signup: password validation ───────────────────────────────
     print("\n--- Signup: password validation ---")
@@ -130,15 +130,15 @@ def run():
     for pw, desc in bad_passwords:
         r = post("/auth/signup", {"name": valid_name, "email": f"pw_{uuid.uuid4().hex[:4]}@example.com",
                                   "password": pw, "phone": valid_phone, "role": "DONOR"})
-        if r and r.status_code in (400, 422):
+        if r is not None and r.status_code in (400, 422):
             ok(f"Password ({desc}) rejected")
         else:
-            fail(f"Password ({desc}) rejected", f"status={r.status_code if r else 'None'}, body={r.text[:100] if r else ''}")
+            fail(f"Password ({desc}) rejected", f"status={r.status_code if r is not None else 'None'}, body={r.text[:100] if r is not None else ''}")
 
     # ── Login: valid (existing account just created) ──────────────
     print("\n--- Login: valid account ---")
     r = post("/auth/login", {"email": valid_email, "password": valid_password})
-    if r and r.status_code == 200:
+    if r is not None and r.status_code == 200:
         ok("Valid login succeeds")
         data = r.json()
         if "access_token" in data:
@@ -146,30 +146,30 @@ def run():
         else:
             fail("JWT returned on login")
     else:
-        fail("Valid login succeeds", f"status={r.status_code if r else 'None'}")
+        fail("Valid login succeeds", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Login: uppercase email normalized ─────────────────────────
     print("\n--- Login: email case normalization ---")
     r = post("/auth/login", {"email": valid_email.upper(), "password": valid_password})
-    if r and r.status_code == 200:
+    if r is not None and r.status_code == 200:
         ok("Login works with uppercase email input")
     else:
-        fail("Login works with uppercase email input", f"status={r.status_code if r else 'None'}")
+        fail("Login works with uppercase email input", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Login: wrong password ─────────────────────────────────────
     print("\n--- Login: invalid credentials ---")
     r = post("/auth/login", {"email": valid_email, "password": "WrongPassword99!"})
-    if r and r.status_code == 401:
+    if r is not None and r.status_code == 401:
         ok("Wrong password rejected (HTTP 401)")
     else:
-        fail("Wrong password rejected", f"status={r.status_code if r else 'None'}")
+        fail("Wrong password rejected", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Login: non-existent email ─────────────────────────────────
     r = post("/auth/login", {"email": "nobody@nowhere.com", "password": "AnyPass1!"})
-    if r and r.status_code == 401:
+    if r is not None and r.status_code == 401:
         ok("Non-existent email rejected (HTTP 401)")
     else:
-        fail("Non-existent email rejected", f"status={r.status_code if r else 'None'}")
+        fail("Non-existent email rejected", f"status={r.status_code if r is not None else 'None'}")
 
     # ── Summary ───────────────────────────────────────────────────
     print("\n" + "=" * 65)

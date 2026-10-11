@@ -5,7 +5,11 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 
+from pathlib import Path
 load_dotenv()
+backend_env = Path(__file__).resolve().parent.parent.parent / ".env"
+if backend_env.exists():
+    load_dotenv(backend_env)
 
 RAW_DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -23,24 +27,25 @@ if "mysql+pymysql://" in url:
     parsed = urlparse(url)
     query_params = parse_qs(parsed.query)
     needs_ssl = False
-    ssl_mode_val = "REQUIRED"
 
     for key in list(query_params.keys()):
-        if key.lower() in ("ssl-mode", "ssl_mode", "ssl", "sslmode", "ssl_ca", "ssl-ca", "ssl_cert", "ssl-cert"):
+        if key.lower() in (
+            "ssl-mode", "ssl_mode", "ssl", "sslmode",
+            "ssl_ca", "ssl-ca", "ssl_cert", "ssl-cert",
+            "ssl_key", "ssl-key"
+        ):
             vals = query_params.pop(key)
             if vals:
                 v = str(vals[0]).upper()
                 if v in ("REQUIRED", "TRUE", "1", "VERIFY_CA", "VERIFY_IDENTITY", "PREFERRED"):
                     needs_ssl = True
-                    if v in ("VERIFY_CA", "VERIFY_IDENTITY"):
-                        ssl_mode_val = v
 
     new_query = urlencode(query_params, doseq=True)
     parsed = parsed._replace(query=new_query)
     url = urlunparse(parsed)
 
     if needs_ssl or "aivencloud.com" in url:
-        connect_args["ssl"] = {"ssl_mode": ssl_mode_val, "check_hostname": False}
+        connect_args["ssl"] = {"check_hostname": False}
 
 DATABASE_URL = url
 
@@ -71,4 +76,3 @@ def get_db():
 
     finally:
         db.close()
-

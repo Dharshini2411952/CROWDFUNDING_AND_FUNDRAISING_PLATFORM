@@ -17,6 +17,8 @@ class SignupRequest(BaseModel):
             v = v.strip()
         if not v:
             raise ValueError("Full name is required.")
+        if len(v) < 2 or len(v) > 100:
+            raise ValueError("Full name must be between 2 and 100 characters.")
         return v
 
     @field_validator("email", mode="before")
@@ -81,4 +83,4 @@ class UserResponse(BaseModel):
     role: str
     phone: Optional[str] = None
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"

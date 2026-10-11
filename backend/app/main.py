@@ -48,25 +48,27 @@ def startup_db_init():
 
 
 raw_cors = os.getenv("CORS_ORIGINS", "")
-parsed_origins = [origin.strip().rstrip("/") for origin in raw_cors.split(",") if origin.strip()]
+parsed_origins = [
+    origin.strip().rstrip("/")
+    for origin in raw_cors.split(",")
+    if origin.strip() and origin.strip() != "*"
+]
 
-if not parsed_origins or "*" in parsed_origins:
-    allowed_origins = ["*"]
-else:
-    expanded = set()
-    for origin in parsed_origins:
-        expanded.add(origin)
-        expanded.add(origin + "/")
-    # Always allow local dev ports in case of local testing
-    local_defaults = [
-        "http://localhost:5173", "http://127.0.0.1:5173",
-        "http://localhost:5174", "http://127.0.0.1:5174",
-        "http://localhost:5175", "http://127.0.0.1:5175"
-    ]
-    for loc in local_defaults:
-        expanded.add(loc)
-        expanded.add(loc + "/")
-    allowed_origins = list(expanded)
+origin_set = {
+    "https://fund-ai-frontend.onrender.com",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+}
+for orig in parsed_origins:
+    origin_set.add(orig)
+
+allowed_origins = sorted(list(origin_set))
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,4 +94,4 @@ def root():
     return {
         "message": "Fund AI Backend is running",
         "status": "success"
-    }
+    }

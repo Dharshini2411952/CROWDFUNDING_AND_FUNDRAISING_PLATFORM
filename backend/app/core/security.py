@@ -1,5 +1,20 @@
 from datetime import datetime, timedelta, timezone
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+backend_env = Path(__file__).resolve().parent.parent.parent / ".env"
+if backend_env.exists():
+    load_dotenv(backend_env)
+
+# Prevent passlib AttributeError on bcrypt >= 4.1.0 where __about__ was removed
+try:
+    import bcrypt
+    if not hasattr(bcrypt, "__about__"):
+        bcrypt.__about__ = type("about", (), {"__version__": getattr(bcrypt, "__version__", "4.0.0")})()
+except Exception:
+    pass
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -19,14 +34,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY must be configured in the backend environment")
-
-# Prevent passlib AttributeError on bcrypt >= 4.1.0 where __about__ was removed
-try:
-    import bcrypt
-    if not hasattr(bcrypt, "__about__") and hasattr(bcrypt, "__version__"):
-        bcrypt.__about__ = type("about", (), {"__version__": bcrypt.__version__})()
-except Exception:
-    pass
 
 pwd_context = CryptContext(
     schemes=["bcrypt", "argon2"],
@@ -50,6 +57,8 @@ def verify_password(
     plain_password: str,
     hashed_password: str
 ) -> bool:
+    if not plain_password or not hashed_password:
+        return False
     try:
         return pwd_context.verify(
             plain_password,
@@ -63,7 +72,7 @@ def verify_password(
                 hashed_password.encode("utf-8")
             )
         except Exception:
-            return plain_password == hashed_password
+            return False
 
 
 

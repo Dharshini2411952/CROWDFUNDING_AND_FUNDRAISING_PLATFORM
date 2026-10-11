@@ -60,13 +60,13 @@ def run_tests():
         db.add(admin_user)
         db.commit()
         db.refresh(admin_user)
-    
+
     admin_token = create_access_token(admin_user.user_id, admin_user.role)
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
     # Donor User
     donor_email = f"donor_{uid}@test.com"
-    r_dn = requests.post(f"{BASE_URL}/auth/signup", json={"name": "Test Donor", "email": donor_email, "password": "Password123!", "role": "DONOR"})
+    r_dn = requests.post(f"{BASE_URL}/auth/signup", json={"name": "Test Donor", "email": donor_email, "password": "Password123!", "phone": "9876543210", "role": "DONOR"})
     assert_res(r_dn.status_code in (200, 201), "Donor Signup", f"Status {r_dn.status_code}")
     r_lg = requests.post(f"{BASE_URL}/auth/login", json={"email": donor_email, "password": "Password123!"})
     assert_res(r_lg.status_code == 200, "Donor Login", f"Status {r_lg.status_code}")
@@ -76,7 +76,7 @@ def run_tests():
 
     # Campaigner User
     camp_email = f"camp_{uid}@test.com"
-    r_cp = requests.post(f"{BASE_URL}/auth/signup", json={"name": "Test Campaigner", "email": camp_email, "password": "Password123!", "role": "CAMPAIGNER"})
+    r_cp = requests.post(f"{BASE_URL}/auth/signup", json={"name": "Test Campaigner", "email": camp_email, "password": "Password123!", "phone": "9876543210", "role": "CAMPAIGNER"})
     assert_res(r_cp.status_code in (200, 201), "Campaigner Signup", f"Status {r_cp.status_code}")
     r_cpl = requests.post(f"{BASE_URL}/auth/login", json={"email": camp_email, "password": "Password123!"})
     assert_res(r_cpl.status_code == 200, "Campaigner Login", f"Status {r_cpl.status_code}")
@@ -86,7 +86,7 @@ def run_tests():
 
     # Second Campaigner User
     camp2_email = f"camp2_{uid}@test.com"
-    requests.post(f"{BASE_URL}/auth/signup", json={"name": "Test Campaigner 2", "email": camp2_email, "password": "Password123!", "role": "CAMPAIGNER"})
+    requests.post(f"{BASE_URL}/auth/signup", json={"name": "Test Campaigner 2", "email": camp2_email, "password": "Password123!", "phone": "9876543210", "role": "CAMPAIGNER"})
     r_c2l = requests.post(f"{BASE_URL}/auth/login", json={"email": camp2_email, "password": "Password123!"})
     camp2_token = r_c2l.json().get("access_token")
     camp2_headers = {"Authorization": f"Bearer {camp2_token}"}
@@ -221,7 +221,7 @@ def run_tests():
         notif_id = notifs[0].get("notification_id") or notifs[0].get("id")
         r_mark = requests.patch(f"{BASE_URL}/notifications/{notif_id}/read", headers=camp_headers)
         assert_res(r_mark.status_code == 200, "Mark notification as read", f"Got {r_mark.status_code}")
-    
+
     r_un = requests.get(f"{BASE_URL}/notifications/unread-count", headers=camp_headers)
     assert_res(r_un.status_code == 200, "Get unread notifications count", f"Got {r_un.status_code}")
 
@@ -267,7 +267,7 @@ def run_tests():
     try:
         from app.models.campaign import Campaign
         from app.models.donation import Donation
-        
+
         # Check orphaned campaigns
         user_ids = set(u.user_id for u in db.query(User).all())
         orphaned_camps = db.query(Campaign).filter(~Campaign.creator_id.in_(user_ids)).count()
