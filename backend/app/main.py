@@ -101,6 +101,7 @@ def root():
 @app.get("/health")
 def health():
     db_status = "unknown"
+    error_detail = ""
     try:
         from app.core.database import SessionLocal
         from sqlalchemy import text
@@ -109,8 +110,13 @@ def health():
         db_status = "connected"
     except Exception as exc:
         db_status = f"error: {type(exc).__name__}"
+        import re
+        raw_msg = str(exc)
+        sanitized = re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", raw_msg)
+        error_detail = sanitized[:300]
     return {
         "status": "ok",
-        "version": "1.0.1",
-        "database": db_status
+        "version": "1.0.2",
+        "database": db_status,
+        "detail": error_detail
     }
