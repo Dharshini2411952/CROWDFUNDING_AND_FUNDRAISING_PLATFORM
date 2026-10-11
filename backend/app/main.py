@@ -18,7 +18,7 @@ from app.routes.saved_campaigns import router as saved_campaigns_router
 app = FastAPI(
     title="Fund AI API",
     description="Crowdfunding and Fundraising Platform API",
-    version="1.0.0"
+    version="1.0.1"
 )
 
 
@@ -93,5 +93,24 @@ app.include_router(admin_router)
 def root():
     return {
         "message": "Fund AI Backend is running",
-        "status": "success"
+        "status": "success",
+        "version": "1.0.1"
+    }
+
+
+@app.get("/health")
+def health():
+    db_status = "unknown"
+    try:
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as exc:
+        db_status = f"error: {type(exc).__name__}"
+    return {
+        "status": "ok",
+        "version": "1.0.1",
+        "database": db_status
     }
